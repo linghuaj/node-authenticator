@@ -140,16 +140,23 @@ passport.use('local-signup', new LocalStrategy({
     })
 }))
 
+//why serialize
 passport.serializeUser(function(user, callback) {
-    console.log(">< user", user)
+	console.log(">< serialize user")
     // Use email since id doesn't exist
-    callback(null, user)
+    callback(null, user._id)
 })
 
+//why deserialize
 passport.deserializeUser(function(id, callback) {
-    // return the hardcoded user
+	console.log(">< deserialize id", id)
+	nodeify(async() => {
+		let user = await User.findById(id).exec()
+		//user = await User.promise.findById(id)
+		console.log(">< user deserialize", user)
+		return user
+	}(), callback, {spread: true})
 
-    callback(null, userConst)
 })
 
 
