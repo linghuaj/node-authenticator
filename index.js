@@ -17,13 +17,6 @@ mongoose.connect('mongodb://127.0.0.1:27017/social-authenticator')
 const PORT = process.env.PORT || 8000
 const SALT = bcrypt.genSaltSync(10)
 
-let userConst = {
-    email: 'foo@foo.com',
-    password: bcrypt.hashSync('asdf', SALT)
-}
-
-
-
 let app = express()
 app.use(flash())
 // Read cookies, required for sessions
@@ -49,13 +42,18 @@ app.use(passport.initialize())
 // Enable passport persistent sessions
 app.use(passport.session())
 
-
-passport.use(new LocalStrategy({
+//we never use this though
+passport.use('local-simple', new LocalStrategy({
     // Use "email" field instead of "username"
     usernameField: 'email',
     // We'll need this later
     failureFlash: true
 }, (email, password, callback) => {
+	let userConst = {
+		email: 'foo@foo.com',
+		password: bcrypt.hashSync('asdf', SALT)
+	}
+
     nodeify(async() => {
         if (email !== userConst.email) {
             return [false, {
@@ -74,9 +72,9 @@ passport.use(new LocalStrategy({
         return userConst
 
         // Use spread option when returning multiple values
-        // use spread
         // so a callback gets convert from [1,2] => callback(null, 1, 2)
         // without spread:true, it becomes   [1, 2] => callback(null, [1, 2])
+        // https://gist.github.com/vanessachem/3ba92e73ff5d21d696b9
     }(), callback, {
         spread: true
     })
