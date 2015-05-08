@@ -8,6 +8,8 @@ let bcrypt = require('bcrypt')
 let nodeify = require('bluebird-nodeify')
 let flash = require('connect-flash')
 let mongoose = require('mongoose')
+let multiparty = require('multiparty')
+
 let User = require('./user')
     // let morgan = require('morgan')
 require('songbird')
@@ -172,9 +174,20 @@ passport.deserializeUser(function(id, callback) {
 function isLoggedIn(req, res, next) {
     //passport handled?
     if (req.isAuthenticated()) return next()
+
     res.redirect('/')
 }
+//TODO;
+//what to do if user click remember me
+function getLoginInfo(req, res, next){
+	console.log("getLoginInfo ><req.body", req.body)
+	let rememberMe = false
+	if (req.body.rememberMe && req.body.rememberMe === 'on'){
+		rememberMe = true
+	}
 
+	next()
+}
 
 // start server
 app.listen(PORT, () => console.log(`Listening @ http://127.0.0.1:${PORT}`))
@@ -191,6 +204,11 @@ app.get('/', (req, res) => res.render('index.ejs', {
 }))
 // And add your root route after app.listen
 app.get('/profile', isLoggedIn, (req, res) => {
+	// console.log("><req", req);
+	// let [{rememberMe: [rememberMe]}] =await new multiparty.Form().promise.parse(req);
+	// let pp1 = {}
+	// pp1.rememberMe = rememberMe
+	// console.log(">< rememberMe", rememberMe);
     // console.log("><req", req)
     // console.log("><res", res)
     return res.render('profile.ejs', {
@@ -205,7 +223,7 @@ app.get('/logout', function(req, res){
 })
 
 // process the login form
-app.post('/login', passport.authenticate('local-login', {
+app.post('/login', getLoginInfo, passport.authenticate('local-login', {
     successRedirect: '/profile',
     failureRedirect: '/',
     failureFlash: true
