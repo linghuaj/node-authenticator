@@ -1,6 +1,6 @@
 # Authenticator Starter
 
-**Env Setup:**
+## Env Setup:
 1.  BabelJS
 2.  MongoDB
 
