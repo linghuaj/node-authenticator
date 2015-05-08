@@ -129,20 +129,16 @@ function isLoggedIn(req, res, next) {
 
     res.redirect('/')
 }
-//TODO;
-//what to do if user click remember me
-function getLoginInfo(req, res, next) {
-    console.log("getLoginInfo ><req.body", req.body)
-    let hour = 3600000
-        // let rememberMe = false
-    if (req.body.rememberMe && req.body.rememberMe === 'on') {
-        req.session.cookie.maxAge = 14 * 24 * hour
-    }
 
-    next()
+function setSessionTimeout(req, res){
+	console.log("><req.body", req.body)
+	if (req.body.remember) {
+          req.session.cookie.expires = false
+        } else {
+          req.session.cookie.maxAge = 1000
+        }
+      res.redirect('/profile')
 }
-
-
 
 // routes
 app.get('/', (req, res) => res.render('index.ejs', {
@@ -160,11 +156,11 @@ app.get('/logout', function(req, res) {
 })
 
 // process the login form
-app.post('/login', getLoginInfo, passport.authenticate('local-login', {
-    successRedirect: '/profile',
+app.post('/login', passport.authenticate('local-login', {
+    // successRedirect: '/profile',
     failureRedirect: '/',
     failureFlash: true
-}))
+}), setSessionTimeout)
 
 // process the signup form
 app.post('/signup', passport.authenticate('local-signup', {
