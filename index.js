@@ -27,6 +27,12 @@ app.use(bodyParser.urlencoded({
     extended: true
 }))
 
+   let userConst = {
+        email: 'foo@foo.com',
+        password: bcrypt.hashSync('asdf', SALT)
+    }
+
+
 // In-memory session support, required by passport.session()
 // http://passportjs.org/guide/configure/
 app.use(session({
@@ -49,10 +55,10 @@ passport.use('local-simple', new LocalStrategy({
     // We'll need this later
     failureFlash: true
 }, (email, password, callback) => {
-	let userConst = {
-		email: 'foo@foo.com',
-		password: bcrypt.hashSync('asdf', SALT)
-	}
+	// let userConst = {
+	// 	email: 'foo@foo.com',
+	// 	password: bcrypt.hashSync('asdf', SALT)
+	// }
 
     nodeify(async() => {
         if (email !== userConst.email) {
@@ -75,6 +81,31 @@ passport.use('local-simple', new LocalStrategy({
         // so a callback gets convert from [1,2] => callback(null, 1, 2)
         // without spread:true, it becomes   [1, 2] => callback(null, [1, 2])
         // https://gist.github.com/vanessachem/3ba92e73ff5d21d696b9
+    }(), callback, {
+        spread: true
+    })
+}))
+
+
+passport.use('local-login', new LocalStrategy({
+    // Use "email" field instead of "username"
+    usernameField: 'email',
+    // We'll need this later
+    failureFlash: true
+}, (email, password, callback) => {
+    nodeify(async() => {
+      if (!email) return [false, {message: 'Invalid email.'}]
+      email = email.toLowerCase()
+      // Lookup user by email address
+      let user = await User.findOne({email}).exec()
+      // Show error if the email does not match any users
+      if (!user) return [false, {message: 'email does not match any users'}]
+      // Show error if the hashed password does not match the stored hash
+      if (!await bcrypt.promise.compare(password, user.password)) {
+        return [false, {message: 'Invalid password.'}]
+      }
+      // Return value will be set to req.user
+      return user
     }(), callback, {
         spread: true
     })
@@ -140,7 +171,7 @@ app.get('/', (req, res) => res.render('index.ejs', {
 app.get('/profile', (req, res) => res.render('profile.ejs', {}))
 
 // process the login form
-app.post('/login', passport.authenticate('local', {
+app.post('/login', passport.authenticate('local-login', {
     successRedirect: '/profile',
     failureRedirect: '/',
     failureFlash: true
