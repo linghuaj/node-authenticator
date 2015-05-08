@@ -199,6 +199,11 @@ app.get('/profile', isLoggedIn, (req, res) => {
     })
 })
 
+app.get('/logout', function(req, res){
+  req.logout()
+  res.redirect('/')
+})
+
 // process the login form
 app.post('/login', passport.authenticate('local-login', {
     successRedirect: '/profile',
