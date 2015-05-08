@@ -9,7 +9,7 @@ let nodeify = require('bluebird-nodeify')
 let flash = require('connect-flash')
 let mongoose = require('mongoose')
 let User = require('./user')
-// let morgan = require('morgan')
+    // let morgan = require('morgan')
 require('songbird')
 mongoose.connect('mongodb://127.0.0.1:27017/social-authenticator')
 
@@ -24,21 +24,22 @@ let userConst = {
 
 
 
-
 let app = express()
 app.use(flash())
 // Read cookies, required for sessions
 app.use(cookieParser('ilovethenodejs'))
 // Get POST/PUT body information (e.g., from html forms like login)
 app.use(bodyParser.json())
-app.use(bodyParser.urlencoded({ extended: true }))
+app.use(bodyParser.urlencoded({
+    extended: true
+}))
 
 // In-memory session support, required by passport.session()
 // http://passportjs.org/guide/configure/
 app.use(session({
-  secret: 'ilovethenodejs',
-  resave: true,
-  saveUninitialized: true
+    secret: 'ilovethenodejs',
+    resave: true,
+    saveUninitialized: true
 }))
 
 // Use the passport
@@ -55,43 +56,63 @@ passport.use(new LocalStrategy({
     // We'll need this later
     failureFlash: true
 }, (email, password, callback) => {
-	nodeify(async ()=>{
+    nodeify(async() => {
         if (email !== userConst.email) {
-            return [false, {message: 'Invalid username'}]
+            return [false, {
+                message: 'Invalid username'
+            }]
         }
 
         if (!await bcrypt.promise.compare(password, userConst.password)) {
-            return [false, {message: 'Invalid password'}]
+            return [false, {
+                message: 'Invalid password'
+            }]
         }
-        console.log(">< success")
-    // Use spread option when returning multiple values
-    }(), callback, {spread: true})
+        //after you return
+        //it becomes req.user
+        //otherwise you won't have anything
+        return userConst
+
+        // Use spread option when returning multiple values
+        // use spread
+        // so a callback gets convert from [1,2] => callback(null, 1, 2)
+        // without spread:true, it becomes   [1, 2] => callback(null, [1, 2])
+    }(), callback, {
+        spread: true
+    })
 }))
 
 
 passport.use('local-signup', new LocalStrategy({
-   // Use "email" field instead of "username"
-   usernameField: 'email'
+    // Use "email" field instead of "username"
+    usernameField: 'email'
 }, (email, password, callback) => {
-    nodeify(async ()=>{
+    nodeify(async() => {
         email = (email || '').toLowerCase()
         // Is the email taken?
-        if (await User.findOne({email}).exec()) {
-            return [false, {message: 'That email is already taken.'}]
+        if (await User.findOne({
+            email
+        }).exec()) {
+            return [false, {
+                message: 'That email is already taken.'
+            }]
         }
 
         // create the user
         let user = new User()
+        user.email = email
         // Use a password hash instead of plain-text
         user.password = await bcrypt.promise.hash(password, SALT)
-        console.log(">< user saved")
+        // console.log(">< user saved")
         return await user.save()
 
-    }(), callback, {spread: true})
+    }(), callback, {
+        spread: true
+    })
 }))
 
 passport.serializeUser(function(user, callback) {
-	console.log(">< user", user)
+    console.log(">< user", user)
     // Use email since id doesn't exist
     callback(null, user)
 })
@@ -105,7 +126,7 @@ passport.deserializeUser(function(id, callback) {
 
 
 // start server
-app.listen(PORT, ()=> console.log(`Listening @ http://127.0.0.1:${PORT}`))
+app.listen(PORT, () => console.log(`Listening @ http://127.0.0.1:${PORT}`))
 
 // And add the following just before app.listen
 // Use ejs for templating, with the default directory /views
@@ -114,7 +135,9 @@ app.set('view engine', 'ejs')
 
 
 // And add your root route after app.listen
-app.get('/', (req, res) => res.render('index.ejs', {message: req.flash('error')}))
+app.get('/', (req, res) => res.render('index.ejs', {
+    message: req.flash('error')
+}))
 // And add your root route after app.listen
 app.get('/profile', (req, res) => res.render('profile.ejs', {}))
 
@@ -131,4 +154,3 @@ app.post('/signup', passport.authenticate('local-signup', {
     failureRedirect: '/',
     failureFlash: true
 }))
-
