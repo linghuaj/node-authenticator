@@ -6,19 +6,23 @@ let passport = require('passport')
 let LocalStrategy = require('passport-local').Strategy
 let bcrypt = require('bcrypt')
 let nodeify = require('bluebird-nodeify')
-let flash = require('connect-flash')
 let mongoose = require('mongoose')
+let flash = require('connect-flash')
 
-let User = require('./user')
-    // let morgan = require('morgan')
+let User = require('./models/user')
+
 require('songbird')
 mongoose.connect('mongodb://127.0.0.1:27017/social-authenticator')
 
-// const NODE_ENV = process.env.NODE_ENV || 'dev'
 const PORT = process.env.PORT || 8000
 const SALT = bcrypt.genSaltSync(10)
 
 let app = express()
+
+// And add the following just before app.listen
+// Use ejs for templating, with the default directory /views
+app.set('view engine', 'ejs')
+
 app.use(flash())
 // Read cookies, required for sessions
 app.use(cookieParser('ilovethenodejs'))
@@ -28,7 +32,6 @@ app.use(bodyParser.urlencoded({
     extended: true
 }))
 
-
 // In-memory session support, required by passport.session()
 // http://passportjs.org/guide/configure/
 app.use(session({
@@ -37,42 +40,34 @@ app.use(session({
     saveUninitialized: true
 }))
 
-// Use the passport
-// middleware to enable passport
+// Use the passport middleware to enable passport
 app.use(passport.initialize())
 
 // Enable passport persistent sessions
 app.use(passport.session())
 
+// start server
+app.listen(PORT, () => console.log(`Listening @ http://127.0.0.1:${PORT}`))
 
+//gist for simple strategy: https://gist.github.com/vanessachem/9293b234ea92d63b73d8
 passport.use('local-login', new LocalStrategy({
-    // Use "email" field instead of "username"
     usernameField: 'email',
-    // We'll need this later
     failureFlash: true
 }, (email, password, callback) => {
     nodeify(async() => {
         if (!email) {
-            return [false, {
-                message: 'Invalid email.'
-            }]
+            return [false, { message: 'Invalid email.'}]
         }
         email = email.toLowerCase()
         // Lookup user by email address
-        let user = await User.findOne({
-                email
-            }).exec()
+        let user = await User.promise.findOne({email})
             // Show error if the email does not match any users
         if (!user) {
-            return [false, {
-                message: 'email does not match any users'
-            }]
+            return [false, {message: 'email does not match any users'}]
         }
         // Show error if the hashed password does not match the stored hash
         if (!await bcrypt.promise.compare(password, user.password)) {
-            return [false, {
-                message: 'Invalid password.'
-            }]
+            return [false, {message: 'Invalid password.'}]
         }
         //how to access req.
         //generate a tokcen and save to cookie
@@ -91,22 +86,15 @@ passport.use('local-signup', new LocalStrategy({
     nodeify(async() => {
         email = (email || '').toLowerCase()
         // Is the email taken?
-        if (await User.findOne({
-            email
-        }).exec()) {
-            return [false, {
-                message: 'That email is already taken.'
-            }]
+        if (await User.promise.findOne({email})) {
+            return [false, {message: 'That email is already taken.'}]
         }
-
         // create the user
         let user = new User()
         user.email = email
         // Use a password hash instead of plain-text
         user.password = await bcrypt.promise.hash(password, SALT)
-        // console.log(">< user saved")
         return await user.save()
-
     }(), callback, {
         spread: true
     })
@@ -124,8 +112,8 @@ passport.serializeUser(function(user, callback) {
 passport.deserializeUser(function(id, callback) {
     console.log(">< deserialize id", id)
     nodeify(async() => {
-        let user = await User.findById(id).exec()
-            //user = await User.promise.findById(id)
+        // https://gist.github.com/vanessachem/71638f362b4405551336
+        let user = await User.promise.findById(id)
         console.log(">< user deserialize", user)
         return user
     }(), callback, {
@@ -154,27 +142,18 @@ function getLoginInfo(req, res, next) {
     next()
 }
 
-// start server
-app.listen(PORT, () => console.log(`Listening @ http://127.0.0.1:${PORT}`))
-
-// And add the following just before app.listen
-// Use ejs for templating, with the default directory /views
-app.set('view engine', 'ejs')
 
 
-
-// And add your root route after app.listen
+// routes
 app.get('/', (req, res) => res.render('index.ejs', {
     message: req.flash('error')
 }))
-// And add your root route after app.listen
 app.get('/profile', isLoggedIn, (req, res) => {
     return res.render('profile.ejs', {
         email: req.user.email,
         id: req.user.id
     })
 })
-
 app.get('/logout', function(req, res) {
     req.logout()
     res.redirect('/')

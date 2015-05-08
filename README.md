@@ -1,5 +1,10 @@
 # Authenticator Starter
 
+**Env Setup:**
+1. BabelJS
+2. MongoDB
+
+
 **To run:**
 ```
 npm start
