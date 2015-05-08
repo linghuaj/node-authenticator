@@ -8,7 +8,6 @@ let bcrypt = require('bcrypt')
 let nodeify = require('bluebird-nodeify')
 let flash = require('connect-flash')
 let mongoose = require('mongoose')
-let multiparty = require('multiparty')
 
 let User = require('./user')
     // let morgan = require('morgan')
@@ -96,24 +95,30 @@ passport.use('local-login', new LocalStrategy({
     failureFlash: true
 }, (email, password, callback) => {
     nodeify(async() => {
-        if (!email) return [false, {
-            message: 'Invalid email.'
-        }]
+        if (!email) {
+            return [false, {
+                message: 'Invalid email.'
+            }]
+        }
         email = email.toLowerCase()
         // Lookup user by email address
         let user = await User.findOne({
                 email
             }).exec()
             // Show error if the email does not match any users
-        if (!user) return [false, {
+        if (!user) {
+            return [false, {
                 message: 'email does not match any users'
             }]
-            // Show error if the hashed password does not match the stored hash
+        }
+        // Show error if the hashed password does not match the stored hash
         if (!await bcrypt.promise.compare(password, user.password)) {
             return [false, {
                 message: 'Invalid password.'
             }]
         }
+        //how to access req.
+        //generate a tokcen and save to cookie
         // Return value will be set to req.user
         return user
     }(), callback, {
@@ -151,6 +156,7 @@ passport.use('local-signup', new LocalStrategy({
 }))
 
 //why serialize
+//when saved to session, it's only going to save userid in the session store
 passport.serializeUser(function(user, callback) {
     console.log(">< serialize user")
     // Use email since id doesn't exist
@@ -172,21 +178,23 @@ passport.deserializeUser(function(id, callback) {
 })
 
 function isLoggedIn(req, res, next) {
-    //passport handled?
+    //passport handled
+    //comes with pasport by default
     if (req.isAuthenticated()) return next()
 
     res.redirect('/')
 }
 //TODO;
 //what to do if user click remember me
-function getLoginInfo(req, res, next){
-	console.log("getLoginInfo ><req.body", req.body)
-	let rememberMe = false
-	if (req.body.rememberMe && req.body.rememberMe === 'on'){
-		rememberMe = true
-	}
+function getLoginInfo(req, res, next) {
+    console.log("getLoginInfo ><req.body", req.body)
+    let hour = 3600000
+        // let rememberMe = false
+    if (req.body.rememberMe && req.body.rememberMe === 'on') {
+        req.session.cookie.maxAge = 14 * 24 * hour
+    }
 
-	next()
+    next()
 }
 
 // start server
@@ -204,22 +212,23 @@ app.get('/', (req, res) => res.render('index.ejs', {
 }))
 // And add your root route after app.listen
 app.get('/profile', isLoggedIn, (req, res) => {
-	// console.log("><req", req);
-	// let [{rememberMe: [rememberMe]}] =await new multiparty.Form().promise.parse(req);
-	// let pp1 = {}
-	// pp1.rememberMe = rememberMe
-	// console.log(">< rememberMe", rememberMe);
+    // console.log("><req", req);
+    // let [{rememberMe: [rememberMe]}] =await new multiparty.Form().promise.parse(req);
+    // let pp1 = {}
+    // pp1.rememberMe = rememberMe
+    // console.log(">< rememberMe", rememberMe);
     // console.log("><req", req)
     // console.log("><res", res)
+    // you would not have a req.user if you did not de
     return res.render('profile.ejs', {
         email: req.user.email,
         id: req.user._id
     })
 })
 
-app.get('/logout', function(req, res){
-  req.logout()
-  res.redirect('/')
+app.get('/logout', function(req, res) {
+    req.logout()
+    res.redirect('/')
 })
 
 // process the login form
