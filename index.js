@@ -44,44 +44,6 @@ app.use(passport.initialize())
 // Enable passport persistent sessions
 app.use(passport.session())
 
-//we never use this though
-passport.use('local-simple', new LocalStrategy({
-    // Use "email" field instead of "username"
-    usernameField: 'email',
-    // We'll need this later
-    failureFlash: true
-}, (email, password, callback) => {
-    let userConst = {
-        email: 'foo@foo.com',
-        password: bcrypt.hashSync('asdf', SALT)
-    }
-
-    nodeify(async() => {
-        if (email !== userConst.email) {
-            return [false, {
-                message: 'Invalid username'
-            }]
-        }
-
-        if (!await bcrypt.promise.compare(password, userConst.password)) {
-            return [false, {
-                message: 'Invalid password'
-            }]
-        }
-        //after you return
-        //it becomes req.user
-        //otherwise you won't have anything
-        return userConst
-
-        // Use spread option when returning multiple values
-        // so a callback gets convert from [1,2] => callback(null, 1, 2)
-        // without spread:true, it becomes   [1, 2] => callback(null, [1, 2])
-        // https://gist.github.com/vanessachem/3ba92e73ff5d21d696b9
-    }(), callback, {
-        spread: true
-    })
-}))
-
 
 passport.use('local-login', new LocalStrategy({
     // Use "email" field instead of "username"
@@ -155,7 +117,7 @@ passport.use('local-signup', new LocalStrategy({
 passport.serializeUser(function(user, callback) {
     console.log(">< serialize user")
     // Use email since id doesn't exist
-    callback(null, user._id)
+    callback(null, user.id)
 })
 
 //why deserialize
@@ -207,17 +169,9 @@ app.get('/', (req, res) => res.render('index.ejs', {
 }))
 // And add your root route after app.listen
 app.get('/profile', isLoggedIn, (req, res) => {
-    // console.log("><req", req);
-    // let [{rememberMe: [rememberMe]}] =await new multiparty.Form().promise.parse(req);
-    // let pp1 = {}
-    // pp1.rememberMe = rememberMe
-    // console.log(">< rememberMe", rememberMe);
-    // console.log("><req", req)
-    // console.log("><res", res)
-    // you would not have a req.user if you did not de
     return res.render('profile.ejs', {
         email: req.user.email,
-        id: req.user._id
+        id: req.user.id
     })
 })
 
