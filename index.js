@@ -28,11 +28,6 @@ app.use(bodyParser.urlencoded({
     extended: true
 }))
 
-let userConst = {
-    email: 'foo@foo.com',
-    password: bcrypt.hashSync('asdf', SALT)
-}
-
 
 // In-memory session support, required by passport.session()
 // http://passportjs.org/guide/configure/
@@ -56,10 +51,10 @@ passport.use('local-simple', new LocalStrategy({
     // We'll need this later
     failureFlash: true
 }, (email, password, callback) => {
-    // let userConst = {
-    // 	email: 'foo@foo.com',
-    // 	password: bcrypt.hashSync('asdf', SALT)
-    // }
+    let userConst = {
+        email: 'foo@foo.com',
+        password: bcrypt.hashSync('asdf', SALT)
+    }
 
     nodeify(async() => {
         if (email !== userConst.email) {
