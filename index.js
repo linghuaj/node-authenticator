@@ -87,6 +87,7 @@ passport.use('local-login', new LocalStrategy({
                 message: 'Invalid password.'
             }]
         }
+        //we can alter the req here, or a middlewhere after this strategy.
         extendCookieExpire(req)
         //how to access req.
         //generate a tokcen and save to cookie
@@ -96,8 +97,6 @@ passport.use('local-login', new LocalStrategy({
         spread: true
     })
 }))
-
-
 
 
 
@@ -155,16 +154,6 @@ function isLoggedIn(req, res, next) {
 
     res.redirect('/')
 }
-
-// function setSessionTimeout(req, res){
-// 	console.log("><req.body", req.body)
-// 	if (req.body.remember) {
-//           req.session.cookie.expires = false
-//         } else {
-//           req.session.cookie.maxAge = 1000
-//         }
-//       res.redirect('/profile')
-// }
 
 // routes
 app.get('/', (req, res) => res.render('index.ejs', {
