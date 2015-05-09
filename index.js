@@ -50,25 +50,44 @@ app.use(passport.session())
 app.listen(PORT, () => console.log(`Listening @ http://127.0.0.1:${PORT}`))
 
 //gist for simple strategy: https://gist.github.com/vanessachem/9293b234ea92d63b73d8
+function extendCookieExpire(req) {
+    if (req.body.remember) {
+        req.session.cookie.expires = false
+    } else {
+        req.session.cookie.maxAge = 1000
+    }
+    return req
+}
+
 passport.use('local-login', new LocalStrategy({
     usernameField: 'email',
-    failureFlash: true
-}, (email, password, callback) => {
+    failureFlash: true,
+    passReqToCallback: true //how to access req in passport cb
+}, (req, email, password, callback) => {
     nodeify(async() => {
         if (!email) {
-            return [false, { message: 'Invalid email.'}]
+            return [false, {
+                message: 'Invalid email.'
+            }]
         }
         email = email.toLowerCase()
         // Lookup user by email address
-        let user = await User.promise.findOne({email})
+        let user = await User.promise.findOne({
+                email
+            })
             // Show error if the email does not match any users
         if (!user) {
-            return [false, {message: 'email does not match any users'}]
+            return [false, {
+                message: 'email does not match any users'
+            }]
         }
         // Show error if the hashed password does not match the stored hash
         if (!await bcrypt.promise.compare(password, user.password)) {
-            return [false, {message: 'Invalid password.'}]
+            return [false, {
+                message: 'Invalid password.'
+            }]
         }
+        extendCookieExpire(req)
         //how to access req.
         //generate a tokcen and save to cookie
         // Return value will be set to req.user
@@ -79,6 +98,9 @@ passport.use('local-login', new LocalStrategy({
 }))
 
 
+
+
+
 passport.use('local-signup', new LocalStrategy({
     // Use "email" field instead of "username"
     usernameField: 'email'
@@ -86,8 +108,12 @@ passport.use('local-signup', new LocalStrategy({
     nodeify(async() => {
         email = (email || '').toLowerCase()
         // Is the email taken?
-        if (await User.promise.findOne({email})) {
-            return [false, {message: 'That email is already taken.'}]
+        if (await User.promise.findOne({
+            email
+        })) {
+            return [false, {
+                message: 'That email is already taken.'
+            }]
         }
         // create the user
         let user = new User()
@@ -130,15 +156,15 @@ function isLoggedIn(req, res, next) {
     res.redirect('/')
 }
 
-function setSessionTimeout(req, res){
-	console.log("><req.body", req.body)
-	if (req.body.remember) {
-          req.session.cookie.expires = false
-        } else {
-          req.session.cookie.maxAge = 1000
-        }
-      res.redirect('/profile')
-}
+// function setSessionTimeout(req, res){
+// 	console.log("><req.body", req.body)
+// 	if (req.body.remember) {
+//           req.session.cookie.expires = false
+//         } else {
+//           req.session.cookie.maxAge = 1000
+//         }
+//       res.redirect('/profile')
+// }
 
 // routes
 app.get('/', (req, res) => res.render('index.ejs', {
@@ -157,10 +183,10 @@ app.get('/logout', function(req, res) {
 
 // process the login form
 app.post('/login', passport.authenticate('local-login', {
-    // successRedirect: '/profile',
+    successRedirect: '/profile',
     failureRedirect: '/',
     failureFlash: true
-}), setSessionTimeout)
+}))
 
 // process the signup form
 app.post('/signup', passport.authenticate('local-signup', {
